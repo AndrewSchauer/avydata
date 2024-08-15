@@ -1,0 +1,8 @@
+AHI_summarizer          Create the AHI input data template based on the
+                        excel workbook used by Hamre et al.
+AHI_template            Create the AHI template based on the excel
+                        workbook used by Hamre et al.
+StationData             Take an initial look at a new dataset, looking
+                        at name, class, and unique values for each
+                        column in a new data frame.
+Write_AHI_inputs        Write the AHI input data to an Excel workbook.
