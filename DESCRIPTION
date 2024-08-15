@@ -7,7 +7,5 @@ Maintainer: Andrew Schauer <andrew@avalancherisksolutions.com>
 Description: Take a first look at a new dataset. Inspect column names, class, and unique values for each column.
 License: What license is it under?
 Encoding: UTF-8
+LazyData: true
 RoxygenNote: 7.3.2
-NeedsCompilation: no
-Packaged: 2024-08-14 22:11:51 UTC; andre
-Built: R 4.3.3; ; 2024-08-14 22:11:51 UTC; windows
