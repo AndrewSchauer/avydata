@@ -53,7 +53,24 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   library(reshape2)
   library(ggplot2)
 
-  if (is.null(major_paths)) {
+  if(!is.null(path_lengths)){
+    path_lengths <- read.csv(path_lengths, header = TRUE)
+    major_paths <- path_lengths$PathName
+    MajorPaths <- input_data %>%
+      filter((RoadLength >= 1 | RoadDepth >= 1) |
+               (RoadHit == TRUE | RoadHit == 1)) %>%
+      filter(PathName %in% major_paths, !is.na(PathName), PathName != "") %>%
+      mutate(PathName = factor(PathName, levels = major_paths)) %>%
+      group_by(PathName) %>%
+      summarise(count = n()) %>%
+      filter(count >= 1) %>%
+      mutate(PathName = as.character(PathName)) %>%
+      pull(PathName)
+
+
+  }
+  if (is.null(major_paths) &
+      is.null(path_lengths) ) {
     PathCounts <- data.frame(table(input_data$PathName))
     RO <- which(PathCounts$Freq >= n_frequency)
     MajorPaths <- PathCounts[RO, "Var1"]
@@ -77,8 +94,6 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   if (length(MajorPaths) == 0) {
     stop("No major paths found.")
   }
-
-  if(!is.null(path_lengths)){path_lengths = read.csv(path_lengths, header = TRUE)}
 
   stopping_dist = (0.278 * reaction_time * speed_limit) +
     ((speed_limit^2)/(254 * (coeff_friction + road_grade)))
