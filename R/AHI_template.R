@@ -95,6 +95,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     stop("No major paths found.")
   }
 
+
   stopping_dist = (0.278 * reaction_time * speed_limit) +
     ((speed_limit^2)/(254 * (coeff_friction + road_grade)))
   percent_trucks = 1 - percent_cars
@@ -391,45 +392,38 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   j_plus <- as.numeric(waiting$j_plus)
   j_minus <- as.numeric(waiting$j_minus)
   Lmax <- as.numeric(waiting$Lmax)
-  # Fill the matrix
   for (i in 1:n) {
-    for (j in 1:(2*n-1)){
-      if((j + i <= n) |
-         j + i > (2*n)) {result_matrix[i,j] <- 0}
-      if (j == n){result_matrix[i,j] <- Ps}
-      if (j == (n+1) &
-          (j-i > 1)){
+    for (j in 1:(2*n-1)) {
+      if ((j + i <= n) | (j + i > (2*n))) {
+        result_matrix[i,j] <- 0
+      } else if (j == n) {
+        result_matrix[i,j] <- Ps
+      } else if (j == (n+1) & (j-i > 1)) {
         sum_j <- j_plus[i]
-        ifelse(Lw > sum_j,
-               result_matrix[i,j] <- Ps_prime,
-               result_matrix[i,j] <- 0)
-      }
-      if (j == (n-1)&
-          (j+i > n)) {
+        result_matrix[i, j] <- ifelse(Lw > sum_j, Ps_prime, 0)
+      } else if (j == (n-1) & (j+i > n)) {
         sum_j <- j_minus[i]
-        ifelse(Lw > sum_j,
-               result_matrix[i,j] <- Ps_prime,
-               result_matrix[i,j] <- 0)
-      }
-      if (j < (n-1) &
-          (j+i > n)) {
-        sum_j <- sum(j_minus[(i-(n-j)+1):i]) + sum(Lmax[(i-(n-j)+1):(i-1)])
-        ifelse(Lw > sum_j,
-               result_matrix[i,j] <- Ps_prime,
-               result_matrix[i,j] <- 0)
-      }
-      if (j > (n+1) &
-          (j + i) <= (2*n) &
-          (i <= j-n+1)){
-        sum_j <- sum(j_plus[i:(j-n+1)]) + sum(Lmax[i+1:(j-n+1)])
-        ifelse(Lw > sum_j,
-               result_matrix[i,j] <- Ps_prime,
-               result_matrix[i,j] <- 0)
+        result_matrix[i, j] <- ifelse(Lw > sum_j, Ps_prime, 0)
+      } else if (j < (n-1) & (j+i > n)) {
+        sum_j <- sum(j_minus[max(1, i-(n-j)+1):i], na.rm = TRUE) + sum(Lmax[max(1, i-(n-j)+1):(i-1)], na.rm=TRUE)
+        result_matrix[i, j] <- ifelse(Lw > sum_j, Ps_prime, 0)
+      } else if (j > (n+1) & (j + i) <= (2*n)) {
+        # Ensure valid indices for summation
+        start_idx <- i
+        end_idx <- min(i+j-n-1, n)
+
+        # Calculate the correct sum
+        sum_j <- sum(j_plus[start_idx:end_idx], na.rm = TRUE) + sum(Lmax[(start_idx+1):end_idx], na.rm = TRUE)
+
+        result_matrix[i, j] <- ifelse(Lw > sum_j, Ps_prime, 0)
       }
     }
   }
 
-  Ps_matrix <- apply(result_matrix, 2, as.numeric)
+
+  #Ps_matrix <- apply(result_matrix, 2, as.numeric)
+  Ps_matrix <- result_matrix
+
 
   # Create an empty matrix to store the results for Pw_matrix
   Pw_matrix <- matrix(0, nrow = n, ncol = 2 * n - 1)
