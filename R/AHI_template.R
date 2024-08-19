@@ -378,23 +378,38 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   Lmax <- as.numeric(waiting$Lmax)
   # Fill the matrix
   for (i in 1:n) {
-    for (j in 1:n) {
-      if (i == j) {
-        result_matrix[i, n] <- Ps
-      } else if (i < j) {
-        if (all(is.na(j_plus[i:(j-1)])) & all(is.na(Lmax[i:(j-1)]))) {
-          result_matrix[i, n + (j - i)] <- Ps_prime
-        } else {
-          sum_j_plus_Lmax <- sum(j_plus[i:(j-1)], na.rm = TRUE) + sum(Lmax[i:(j-1)], na.rm = TRUE)
-          result_matrix[i, n + (j - i)] <- ifelse(Lw > sum_j_plus_Lmax, Ps_prime, 0)
-        }
-      } else {
-        if (all(is.na(j_minus[j:(i-1)])) & all(is.na(Lmax[j:(i-1)]))) {
-          result_matrix[i, n - (i - j)] <- Ps_prime
-        } else {
-          sum_j_minus_Lmax <- sum(j_minus[j:(i-1)], na.rm = TRUE) + sum(Lmax[j:(i-1)], na.rm = TRUE)
-          result_matrix[i, n - (i - j)] <- ifelse(Lw > sum_j_minus_Lmax, Ps_prime, 0)
-        }
+    for (j in 1:(2*n-1)){
+      if((j + i <= n) |
+         j + i > (2*n)) {result_matrix[i,j] <- 0}
+      if (j == n){result_matrix[i,j] <- Ps}
+      if (j == (n+1) &
+          (j-i > 1)){
+        sum_j <- j_plus[i]
+        ifelse(Lw > sum_j,
+               result_matrix[i,j] <- Ps_prime,
+               result_matrix[i,j] <- 0)
+      }
+      if (j == (n-1)&
+          (j+i > n)) {
+        sum_j <- j_minus[i]
+        ifelse(Lw > sum_j,
+               result_matrix[i,j] <- Ps_prime,
+               result_matrix[i,j] <- 0)
+      }
+      if (j < (n-1) &
+          (j+i > n)) {
+        sum_j <- sum(j_minus[(i-(n-j)+1):i]) + sum(Lmax[(i-(n-j)+1):(i-1)])
+        ifelse(Lw > sum_j,
+               result_matrix[i,j] <- Ps_prime,
+               result_matrix[i,j] <- 0)
+      }
+      if (j > (n+1) &
+          (j + i) <= (2*n) &
+          (i <= j-n+1)){
+        sum_j <- sum(j_plus[i:(j-n+1)]) + sum(Lmax[i+1:(j-n+1)])
+        ifelse(Lw > sum_j,
+               result_matrix[i,j] <- Ps_prime,
+               result_matrix[i,j] <- 0)
       }
     }
   }
@@ -415,7 +430,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   for (i in 1:n) {
     for (j in 1:(2 * n - 1)) {
       if(i + j <= n |
-         i + j > 2*n) {Pw_matrix[i, j] <- NA}
+         i + j > 2*n) {Pw_matrix[i, j] <- 0}
       if (i + j > n &
           i + j <= 2*n) {
         lookup_row = i - (n-j)
