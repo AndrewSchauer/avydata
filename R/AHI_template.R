@@ -338,8 +338,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     # Check and assign powder events
       powder[ob, "path_count"] <- ob
       powder[ob, "PathName"] <- MajorPaths[ob]
-      powder[ob, "AnnualFreq"] <- storage[ob, "powder_frequency"]
-      powder[ob, "ReturnPeriod"] <- ifelse(powder[ob, "AnnualFreq"] == 0, powder_RI, 1/storage[ob, "powder_frequency"])
+      powder[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "powder_frequency"]), path_info[ob, "powder_frequency"], storage[ob, "powder_frequency"]))
+      powder[ob, "ReturnPeriod"] <- ifelse(powder[ob, "AnnualFreq"] == 0, powder_RI, 1/powder[ob, "AnnualFreq"])
       powder[ob, "AveLength_m"] <- storage[ob, "ave_length_powder_m"]
       if (!is.null(path_info) && powder[ob, "PathName"] %in% path_info$PathName) {
         powder[ob, "Lmax_m"] <- path_info[path_info$PathName == powder[ob, "PathName"], "length"]
@@ -360,8 +360,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     # Check and assign light events
       light[ob, "path_count"] <- ob
       light[ob, "PathName"] <- MajorPaths[ob]
-      light[ob, "AnnualFreq"] <- storage[ob, "light_frequency"]
-      light[ob, "ReturnPeriod"] <- ifelse(light[ob, "AnnualFreq"] == 0, light_RI, 1/storage[ob, "light_frequency"])
+      light[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "light_frequency"]), path_info[ob, "light_frequency"], storage[ob, "light_frequency"]))
+      light[ob, "ReturnPeriod"] <- ifelse(light[ob, "AnnualFreq"] == 0, light_RI, 1/light[ob, "AnnualFreq"])
       light[ob, "AveLength_m"] <- storage[ob, "ave_length_light_m"]
       if (!is.null(path_info) && light[ob, "PathName"] %in% path_info$PathName) {
         light[ob, "Lmax_m"] <- path_info[path_info$PathName == light[ob, "PathName"], "length"]
@@ -382,8 +382,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     # Check and assign deep events
       deep[ob, "path_count"] <- ob
       deep[ob, "PathName"] <- MajorPaths[ob]
-      deep[ob, "AnnualFreq"] <- storage[ob, "deep_frequency"]
-      deep[ob, "ReturnPeriod"] <- ifelse(deep[ob, "AnnualFreq"] == 0, deep_RI, 1/storage[ob, "deep_frequency"])
+      deep[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "deep_frequency"]), path_info[ob, "deep_frequency"], storage[ob, "deep_frequency"]))
+      deep[ob, "ReturnPeriod"] <- ifelse(deep[ob, "AnnualFreq"] == 0, deep_RI, 1/deep[ob, "AnnualFreq"])
       deep[ob, "AveLength_m"] <- storage[ob, "ave_length_deep_m"]
       if (!is.null(path_info) && deep[ob, "PathName"] %in% path_info$PathName) {
         deep[ob, "Lmax_m"] <- path_info[path_info$PathName == deep[ob, "PathName"], "length"]
@@ -404,8 +404,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     # Check and assign plunging events
       plunging[ob, "path_count"] <- ob
       plunging[ob, "PathName"] <- MajorPaths[ob]
-      plunging[ob, "AnnualFreq"] <- storage[ob, "plunging_frequency"]
-      plunging[ob, "ReturnPeriod"] <- ifelse(plunging[ob, "AnnualFreq"] == 0, plunging_RI, 1/storage[ob, "plunging_frequency"])
+      plunging[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "plunging_frequency"]), path_info[ob, "plunging_frequency"], storage[ob, "plunging_frequency"]))
+      plunging[ob, "ReturnPeriod"] <- ifelse(plunging[ob, "AnnualFreq"] == 0, plunging_RI, 1/plunging[ob, "AnnualFreq"])
       plunging[ob, "AveLength_m"] <- storage[ob, "ave_length_plunging_m"]
       if (!is.null(path_info) && plunging[ob, "PathName"] %in% path_info$PathName) {
         plunging[ob, "Lmax_m"] <- path_info[path_info$PathName == plunging[ob, "PathName"], "length"]
