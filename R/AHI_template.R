@@ -57,19 +57,21 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   if(!is.null(path_info)){
     path_info <- read.csv(path_info, header = TRUE)
     major_paths <- path_info$PathName
-    MajorPaths <- input_data %>%
-      filter((RoadLength >= 1 | RoadDepth >= 1) |
-               (RoadHit == TRUE | RoadHit == 1)) %>%
-      filter(PathName %in% major_paths, !is.na(PathName), PathName != "") %>%
-      mutate(PathName = factor(PathName, levels = major_paths)) %>%
-      group_by(PathName) %>%
-      summarise(count = n()) %>%
-      filter(count >= 1) %>%
-      mutate(PathName = as.character(PathName)) %>%
-      pull(PathName)
+    #MajorPaths <- input_data %>%
+    #  filter((RoadLength >= 1 | RoadDepth >= 1) |
+    #           (RoadHit == TRUE | RoadHit == 1)) %>%
+    #  filter(PathName %in% major_paths, !is.na(PathName), PathName != "") %>%
+    #  mutate(PathName = factor(PathName, levels = major_paths)) %>%
+    #  group_by(PathName) %>%
+    #  summarise(count = n()) %>%
+    #  filter(count >= 1) %>%
+    #  mutate(PathName = as.character(PathName)) %>%
+    #  pull(PathName)
+    MajorPaths <- major_paths
 
 
   }
+  else{
   if (is.null(major_paths) &
       is.null(path_info) ) {
     PathCounts <- data.frame(table(input_data$PathName))
@@ -92,6 +94,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       mutate(PathName = as.character(PathName)) %>%
       pull(PathName)
   }
+  }
   if (length(MajorPaths) == 0) {
     stop("No major paths found.")
   }
@@ -100,8 +103,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   stopping_dist = (0.278 * reaction_time * speed_limit) +
     ((speed_limit^2)/(254 * (coeff_friction + road_grade)))
   percent_trucks = 1 - percent_cars
-  n_cars = percent_cars * WADT
-  n_trucks = percent_trucks * WADT
+  n_cars = round(percent_cars * WADT, 0)
+  n_trucks = round(percent_trucks * WADT, 0)
   Lw <- ((WADT*length_car_m*wait_time/24/2)*percent_cars) + ((WADT*length_truck_m*wait_time/24/2)*percent_trucks)
 
 
@@ -159,11 +162,12 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   road_hits <- list()
   for (ob in 1:length(MajorPaths)) {
     events <- which(WorkingData$PathName == MajorPaths[ob] &
-                      (WorkingData[, "RoadDepth"] > 0 | WorkingData[,
-                                                                    "RoadHit"] %in% c("TRUE", 1) | WorkingData[,
-                                                                                                               "RoadLength"] > 0 | WorkingData[, "Size"] >=
-                         4))
-    missing_seasons <- ifelse(!is.null(path_info[ob, "missing_seasons"]),
+                      (WorkingData[, "RoadDepth"] > 0 |
+                         WorkingData[, "RoadHit"] %in% c("TRUE", 1) |
+                         WorkingData[, "RoadLength"] > 0 |
+                         WorkingData[, "Size"] >= 4))
+
+    missing_seasons <- ifelse(!is.na(path_info[ob, "missing_seasons"]),
                               path_info[ob, "missing_seasons"],
                               missing_seasons)
     powder_events <- which(WorkingData[events, "AirBlast"] ==
@@ -175,8 +179,48 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     plunging_events <- which(WorkingData[events, "RoadDepth"] >=
                                20)
     full_record <- which(WorkingData$PathName == MajorPaths[ob])
-    if (length(events) == 0 || length(full_record) == 0)
-      next
+    if (length(events) == 0 || length(full_record) == 0){
+      storage[ob, "PathName"] <- MajorPaths[ob]
+      storage[ob, c("n_events",
+                    "n_naturals",
+                    "n_artificial",
+                    "n_hits",
+                    "n_roadopen",
+                    "mitigation_effectiveness",
+                    "residual_risk",
+                    "open_naturals",
+                    "closed_naturals",
+                    "n_powder",
+                    "n_light",
+                    "n_deep",
+                    "n_plunging",
+                    "frequency",
+                    "powder_frequency",
+                    "light_frequency",
+                    "deep_frequency",
+                    "plunging_frequency",
+                    "n_calc_events",
+                    "light_percentage",
+                    "deep_percentage",
+                    "plunging_percentage")] <- 0
+      full_record <- which(WorkingData$PathName == MajorPaths[ob])
+      storage[ob, "firstdate"] <- min(WorkingData[full_record,
+                                                  "Season"], na.rm = TRUE)
+      storage[ob, "lastdate"] <- max(WorkingData[full_record,
+                                                 "Season"], na.rm = TRUE)
+      full_length <- (max(WorkingData[, "Season"], na.rm = TRUE) - min(WorkingData[, "Season"], na.rm = TRUE))
+      storage[ob, "recordlength"] <- full_length - missing_seasons + 1
+      storage[ob, "ave_length_powder_ft"] <- 1/.3048
+      storage[ob, "ave_length_light_ft"] <- ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"]/.3048, 1/.3048)
+      storage[ob, "ave_length_deep_ft"] <- ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"]/.3048, 1/.3048)
+      storage[ob, "ave_length_plunging_ft"] <- ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"]/.3048, 1/.3048)
+      storage[ob, "ave_length_powder_m"] <- round(storage[ob, "ave_length_powder_ft"] * 0.3048, 0)
+      storage[ob, "ave_length_light_m"] <- round(storage[ob, "ave_length_light_ft"] * 0.3048, 0)
+      storage[ob, "ave_length_deep_m"] <- round(storage[ob, "ave_length_deep_ft"] * 0.3048, 0)
+      storage[ob, "ave_length_plunging_m"] <- round(storage[ob,"ave_length_plunging_ft"] * 0.3048, 0)
+
+    }
+    else{
     storage[ob, "PathName"] <- MajorPaths[ob]
     storage[ob, "n_events"] <- length(events)
     storage[ob, "n_naturals"] <- length(which(WorkingData[events,
@@ -260,23 +304,36 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                                   1/.3048), 0)
     storage[ob, "ave_length_light_ft"] <- round(ifelse(length(light_events) > 0,
                                                   ifelse(all(is.na(WorkingData[light_events, "RoadLength"])),
-                                                         ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"], 1/.3048),
+                                                         ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"]/.3048, 1/.3048),
                                                          mean(WorkingData[light_events, "RoadLength"], na.rm = TRUE)),
-                                                 ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"], 1/.3048)), 0)
+                                                 ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"]/.3048, 1/.3048)), 0)
     storage[ob, "ave_length_deep_ft"] <- round(ifelse(length(deep_events) > 0,
                                                   ifelse(all(is.na(WorkingData[deep_events, "RoadLength"])),
-                                                         ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"], 1/.3048),
+                                                         ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"]/.3048, 1/.3048),
                                                          mean(WorkingData[deep_events, "RoadLength"], na.rm = TRUE)),
-                                                ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"], 1/.3048)), 0)
+                                                ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"]/.3048, 1/.3048)), 0)
     storage[ob, "ave_length_plunging_ft"] <- round(ifelse(length(plunging_events) > 0,
                                                   ifelse(all(is.na(WorkingData[plunging_events, "RoadLength"])),
-                                                         ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"], 1/.3048),
+                                                         ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"]/.3048, 1/.3048),
                                                          mean(WorkingData[plunging_events, "RoadLength"], na.rm = TRUE)),
-                                                  ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"], 1/.3048)), 0)
-    storage[ob, "ave_length_powder_m"] <- round(storage[ob, "ave_length_powder_ft"] * 0.3048, 0)
-    storage[ob, "ave_length_light_m"] <- round(storage[ob, "ave_length_light_ft"] * 0.3048, 0)
-    storage[ob, "ave_length_deep_m"] <- round(storage[ob, "ave_length_deep_ft"] * 0.3048, 0)
-    storage[ob, "ave_length_plunging_m"] <- round(storage[ob,"ave_length_plunging_ft"] * 0.3048, 0)
+                                                  ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"]/.3048, 1/.3048)), 0)
+    storage[ob, "ave_length_powder_m"] <- ifelse(is.null(path_info),
+                                                 round(storage[ob, "ave_length_powder_ft"] * 0.3048, 0),
+                                                 min(round(storage[ob, "ave_length_powder_ft"] * 0.3048, 0), path_info[ob, "length"])
+                                                 )
+    storage[ob, "ave_length_light_m"] <- ifelse(is.null(path_info),
+                                                round(storage[ob, "ave_length_light_ft"] * 0.3048, 0),
+                                                min(round(storage[ob, "ave_length_light_ft"] * 0.3048, 0), path_info[ob, "length"])
+                                                )
+    storage[ob, "ave_length_deep_m"] <- ifelse(is.null(path_info),
+                                               round(storage[ob, "ave_length_deep_ft"] * 0.3048, 0),
+                                               min(round(storage[ob, "ave_length_deep_ft"] * 0.3048, 0), path_info[ob, "length"])
+    )
+    storage[ob, "ave_length_plunging_m"] <- ifelse(is.null(path_info),
+                                                   round(storage[ob, "ave_length_plunging_ft"] * 0.3048, 0),
+                                                   min(round(storage[ob, "ave_length_plunging_ft"] * 0.3048, 0), path_info[ob, "length"])
+    )
+    }
 
     # Check and assign powder events
       powder[ob, "path_count"] <- ob
@@ -291,6 +348,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                        max(WorkingData[powder_events, "RoadLength"], na.rm = TRUE),
                                        1)
       }
+      powder[ob, "AveLength_m"] <- min(storage[ob, "ave_length_powder_m"], powder[ob, "Lmax_m"])
       powder[ob, "Encounter_car"] <- (n_cars * (powder[ob, "AveLength_m"] + stopping_dist))/(powder[ob, "ReturnPeriod"] * speed_limit * 24000)
       powder[ob, "Encounter_truck"] <- (n_trucks * (powder[ob, "AveLength_m"] + stopping_dist))/(powder[ob, "ReturnPeriod"] * speed_limit * 24000)
       powder[ob, "Encounter_total"] <- powder[ob, "Encounter_car"] + powder[ob, "Encounter_truck"]
@@ -312,6 +370,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                        max(WorkingData[light_events, "RoadLength"], na.rm = TRUE),
                                        1)
       }
+      light[ob, "AveLength_m"] <- min(storage[ob, "ave_length_light_m"], light[ob, "Lmax_m"])
       light[ob, "Encounter_car"] <- (n_cars * (light[ob, "AveLength_m"] + stopping_dist))/(light[ob, "ReturnPeriod"] * speed_limit * 24000)
       light[ob, "Encounter_truck"] <- (n_trucks * (light[ob, "AveLength_m"] + stopping_dist))/(light[ob, "ReturnPeriod"] * speed_limit * 24000)
       light[ob, "Encounter_total"] <- light[ob, "Encounter_car"] + light[ob, "Encounter_truck"]
@@ -333,6 +392,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                        max(WorkingData[deep_events, "RoadLength"], na.rm = TRUE),
                                        1)
       }
+      deep[ob, "AveLength_m"] <- min(storage[ob, "ave_length_deep_m"], deep[ob, "Lmax_m"])
       deep[ob, "Encounter_car"] <- (n_cars * (deep[ob, "AveLength_m"] + stopping_dist))/(deep[ob, "ReturnPeriod"] * speed_limit * 24000)
       deep[ob, "Encounter_truck"] <- (n_trucks * (deep[ob, "AveLength_m"] + stopping_dist))/(deep[ob, "ReturnPeriod"] * speed_limit * 24000)
       deep[ob, "Encounter_total"] <- deep[ob, "Encounter_car"] + deep[ob, "Encounter_truck"]
@@ -354,6 +414,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                        max(WorkingData[plunging_events, "RoadLength"], na.rm = TRUE),
                                        1)
       }
+      plunging[ob, "AveLength_m"] <- min(storage[ob, "ave_length_plunging_m"], plunging[ob, "Lmax_m"])
       plunging[ob, "Encounter_car"] <- (n_cars * (plunging[ob, "AveLength_m"] + stopping_dist))/(plunging[ob, "ReturnPeriod"] * speed_limit * 24000)
       plunging[ob, "Encounter_truck"] <- (n_trucks * (plunging[ob, "AveLength_m"] + stopping_dist))/(plunging[ob, "ReturnPeriod"] * speed_limit * 24000)
       plunging[ob, "Encounter_total"] <- plunging[ob, "Encounter_car"] + plunging[ob, "Encounter_truck"]
@@ -373,6 +434,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       waiting[ob, "ave_cars_light"] <- round(light[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
       waiting[ob, "deep_return"] <- deep[ob, "ReturnPeriod"]
       waiting[ob, "ave_cars_deep"] <- round(deep[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
+      waiting[ob, "plunging_return"] <- plunging[ob, "ReturnPeriod"]
+      waiting[ob, "ave_cars_plunging"] <- round(plunging[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
       }else{
         waiting[ob, "path_count"] <- ob
         waiting[ob, "PathName"] <-  MajorPaths[ob]
@@ -383,6 +446,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
         waiting[ob, "ave_cars_light"] <- round(light[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
         waiting[ob, "deep_return"] <- deep[ob, "ReturnPeriod"]
         waiting[ob, "ave_cars_deep"] <- round(deep[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
+        waiting[ob, "plunging_return"] <- plunging[ob, "ReturnPeriod"]
+        waiting[ob, "ave_cars_plunging"] -> round(plunging[ob, "AveLength_m"]/((length_car_m*percent_cars)+(length_truck_m*percent_trucks)), 0)
       }
 
       # Assign final PathInfo and update station_list
@@ -448,18 +513,23 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   light_return <- waiting$light_return
   ave_cars_deep <- waiting$ave_cars_deep
   deep_return <- waiting$deep_return
+  ave_cars_plunging <- waiting$ave_cars_plunging
+  plunging_return <- waiting$plunging_return
 
   # Fill the Pw_matrix
   for (i in 1:n) {
     for (j in 1:(2 * n - 1)) {
       if(i + j <= n |
          i + j > 2*n) {Pw_matrix[i, j] <- 0}
-      if (i + j > n &
-          i + j <= 2*n) {
+      else
+        #if (i + j > n &
+         # i + j <= 2*n)
+        {
         lookup_row = i - (n-j)
         lookup_column = j
-        Pw_matrix[i, j] <- (Q_cars_light * (ave_cars_light[lookup_row] / light_return[lookup_row]) * Ps_matrix[lookup_row, lookup_column]) +
-          (Q_cars_deep * (ave_cars_deep[lookup_row] / deep_return[lookup_row]) * Ps_matrix[lookup_row, lookup_column])
+        Pw_matrix[i, j] <- (Q_cars_light * (ave_cars_light[lookup_row] / light_return[lookup_row]) * Ps_matrix[i, lookup_column]) +
+          (Q_cars_deep * (ave_cars_deep[lookup_row] / deep_return[lookup_row]) * Ps_matrix[i, lookup_column]) +
+          (Q_cars_plunging * (ave_cars_plunging[lookup_row] / plunging_return[lookup_row]) * Ps_matrix[i, lookup_column])
       }
     }
   }
@@ -521,7 +591,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   SumTab$Total_AHI_2 <- round(SumTab$Moving_AHI + SumTab$Waiting_AHI_2, 2)
   SumTab$Mitigation_Effectiveness <- round(storage[, "mitigation_effectiveness"], 2)
   SumTab$Residual_Risk <- round(1-SumTab$Mitigation_Effectiveness, 2)
-  SumTab$Residual_AHI <- round(SumTab$Residual_Risk*SumTab$Total_AHI, 1)
+  SumTab$Residual_AHI <- round(SumTab$Residual_Risk*SumTab$Total_AHI_2, 1)
 
   #Table of road hits
   combined_road_hits <- do.call(rbind, road_hits) %>% select_if(~any(!is.na(.) & . != ""))
