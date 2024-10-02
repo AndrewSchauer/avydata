@@ -609,6 +609,13 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                    AHI_W = SumTab$Waiting_AHI,
                    PathName = SumTab$PathName)
   OH_long <- reshape2::melt(OH,id.vars = "PathName")
+  OH_long$PathName <- factor(OH_long$PathName, levels = MajorPaths)
+
+  OH2 <- data.frame(AHI_M = SumTab$Moving_AHI,
+                   AHI_W2 = SumTab$Waiting_AHI_2,
+                   PathName = SumTab$PathName)
+  OH_long_2 <- reshape2::melt(OH2,id.vars = "PathName")
+  OH_long_2$PathName <- factor(OH_long_2$PathName, levels = MajorPaths)
 
   # Plot the barplots
   AHI_Barplot <- ggplot(OH_long, aes(x = PathName, y = value, fill = variable)) +
@@ -618,6 +625,18 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     scale_fill_manual(values = c("AHI_M" = "palegreen3", "AHI_W" = "tan1"),
                       labels = c("AHI_M" = "Moving AHI",
                                  "AHI_W" = "Waiting AHI")) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.background = element_rect(fill = "gray87", color = NA),
+          plot.background = element_rect(fill = "gray97", color = NA))
+
+  # Plot the barplots
+  AHI_Barplot_2 <- ggplot(OH_long_2, aes(x = PathName, y = value, fill = variable)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(x = "Path Name", y = "AHI", fill = "Type", title = "Moving and Waiting AHI by Path (Sum 2)") +
+    theme_minimal()+
+    scale_fill_manual(values = c("AHI_M" = "palegreen3", "AHI_W2" = "tan1"),
+                      labels = c("AHI_M" = "Moving AHI",
+                                 "AHI_W2" = "Waiting AHI (Sum 2)")) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.background = element_rect(fill = "gray87", color = NA),
           plot.background = element_rect(fill = "gray97", color = NA))
@@ -638,6 +657,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     Probability_waiting = Pw_matrix,
     Overall_Hazard = SumTab,
     Overall_AHI = AHI_totals,
-    plots = AHI_Barplot
+    plot1 = AHI_Barplot,
+    plot2 = AHI_Barplot_2
   )
 }
