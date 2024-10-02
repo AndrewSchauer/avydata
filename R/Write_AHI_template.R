@@ -98,10 +98,16 @@ Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, 
   writeData(wb, sheet = "Input Parameters", AHI_sum$input_params)
 
   # Write sheet for plots
-  plot_path <- "plot.png"
-  ggsave(plot_path, plot = AHI_sum$plots, width = 9, height = 8, dpi = 300)
+  plot_path <- "plot1.png"
+  ggsave(plot_path, plot = AHI_sum$plot1, width = 9, height = 8, dpi = 300)
   addWorksheet(wb, "AHI Plots")
   insertImage(wb, "AHI Plots", plot_path, startRow = 2, startCol = 2, width = 9, height = 8)
+
+  #Write sheet for second plot
+  plot_path <- "plot2.png"
+  ggsave(plot_path, plot = AHI_sum$plot2, width = 9, height = 8, dpi = 300)
+  addWorksheet(wb, "AHI Plots Sum2")
+  insertImage(wb, "AHI Plots Sum2", plot_path, startRow = 2, startCol = 2, width = 9, height = 8)
 
   #Write Sheet for Overall Hazard
   addWorksheet(wb, sheetName = "Overall Hazard")
