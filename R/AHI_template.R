@@ -3,6 +3,7 @@
 #' @param coeff_friction The coefficient of friction between the tires and the road. It is typically assumed to be equal to 0.7 on a dry road and in the range from 0.3 to 0.4 on a wet road. Default is 0.2.
 #' @param deep_RI Return Interval to use for deep events if no events occur in the record. Default is 100.
 #' @param input_data The input avalanche record. This format must comply to the DHA avalanche database PathNames in order for the function to work.
+#' @param include_plunging Logical. If TRUE, events with > 20' debris on road will be classified as'plunging'. If FALSE, all events with >3' on road will be classified as 'deep'. Default is TRUE.
 #' @param length_car_m Average car length.
 #' @param length_truck_m Average truck length.
 #' @param light_RI Return Interval to use for light events if no events occur in the record. Default is 100.
@@ -42,7 +43,7 @@
 AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT = 7000,
           percent_cars = 0.98, length_car_m = 15, length_truck_m = 30,
           reaction_time = 2.5, speed_limit = 48, road_grade = -0.1,
-          coeff_friction = 0.2, Q_cars_powder = 0, Q_trucks_powder = 0,
+          coeff_friction = 0.2, include_plunging = TRUE, Q_cars_powder = 0, Q_trucks_powder = 0,
           Q_cars_light = 3, Q_trucks_light = 3, Q_cars_deep = 10,
           Q_trucks_deep = 10, Q_cars_plunging = 12, Q_trucks_plunging = 12,
           powder_RI = 100, light_RI = 100, deep_RI = 100, plunging_RI = 1000,
@@ -172,12 +173,16 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                               missing_seasons)
     powder_events <- which(WorkingData[events, "AirBlast"] ==
                              "J" & WorkingData[events, "RoadDepth"] == 0)
-    light_events <- which(WorkingData[events, "RoadDepth"] <=
-                            3)
-    deep_events <- which(WorkingData[events, "RoadDepth"] >
-                           3 & WorkingData[events, "RoadDepth"] < 20)
+    light_events <- which(WorkingData[events, "RoadDepth"] <= 3)
+    if(include_plunging == TRUE){
+    deep_events <- which(WorkingData[events, "RoadDepth"] > 3
+                           & WorkingData[events, "RoadDepth"] < 20)
     plunging_events <- which(WorkingData[events, "RoadDepth"] >=
-                               20)
+                               20)}
+    else{
+      deep_events <- which(WorkingData[events, "RoadDepth"] >3)
+      plunging_events <- NULL
+    }
     full_record <- which(WorkingData$PathName == MajorPaths[ob])
     if (length(events) == 0 || length(full_record) == 0){
       storage[ob, "PathName"] <- MajorPaths[ob]
@@ -259,11 +264,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     storage[ob, "n_light"] <- length(which(WorkingData[events,
                                                        "RoadDepth"] <= 3 & WorkingData[events, "RoadDepth"] >
                                              0))
-    storage[ob, "n_deep"] <- length(which(WorkingData[events,
-                                                      "RoadDepth"] > 3 & WorkingData[events, "RoadDepth"] <
-                                            20))
-    storage[ob, "n_plunging"] <- length(which(WorkingData[events,
-                                                          "RoadDepth"] >= 20))
+    storage[ob, "n_deep"] <- length(deep_events)
+    storage[ob, "n_plunging"] <- length(plunging_events)
     storage[ob, "frequency"] <- storage[ob, "n_hits"]/storage[ob,
                                                               "recordlength"]
     storage[ob, "powder_frequency"] <- storage[ob, "n_powder"]/storage[ob, "recordlength"]
@@ -279,12 +281,20 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     light_forPercent <- length(which(WorkingData[events,
                                                  "RoadDepth"] <= 3 & WorkingData[events, "RoadDepth"] >
                                        0 & WorkingData[events, "RoadLength"] > 0))
-    deep_forPercent <- length(which(WorkingData[events,
-                                                "RoadDepth"] > 3 & WorkingData[events, "RoadDepth"] <
-                                      20 & WorkingData[events, "RoadLength"] > 0))
-    plunging_forPercent <- length(which(WorkingData[events,
-                                                    "RoadDepth"] >= 20 & WorkingData[events, "RoadLength"] >
-                                          0))
+    deep_forPercent <- if (include_plunging == TRUE){
+      length(which(WorkingData[events, "RoadDepth"] > 3 &
+                                      WorkingData[events, "RoadDepth"] < 20 &
+                                      WorkingData[events, "RoadLength"] > 0))
+    } else {
+      length(which(WorkingData[events, "RoadDepth"] > 3 &
+                     WorkingData[events, "RoadLength"] > 0))
+    }
+    plunging_forPercent <- if(include_plunging == TRUE){
+      length(which(WorkingData[events, "RoadDepth"] >= 20 &
+                     WorkingData[events, "RoadLength"] > 0))
+    } else {
+      0
+    }
     total_events <- light_forPercent + deep_forPercent +
       plunging_forPercent
     if (total_events > 0) {
