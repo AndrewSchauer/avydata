@@ -15,6 +15,7 @@ Write_AHI_template(
   reaction_time = 2.5,
   speed_limit = 48,
   road_grade = -0.1,
+  include_plunging = TRUE,
   coeff_friction = 0.2,
   Q_cars_powder = 0,
   Q_trucks_powder = 0,
@@ -59,6 +60,8 @@ Write_AHI_template(
 \item{speed_limit}{Speed limit in km/h. Default 48 km/h}
 
 \item{road_grade}{Grade of road in percentage as a decimal. Negative values indicate downhill slope. Default is -0.1.}
+
+\item{include_plunging}{Logical. If TRUE, events with > 20' debris on road will be classified as'plunging'. If FALSE, all events with >3' on road will be classified as 'deep'. Default is TRUE.}
 
 \item{coeff_friction}{the coefficient of friction between the tires and the road. It is typically assumed to be equal to 0.7 on a dry road and in the range from 0.3 to 0.4 on a wet road. Default is 0.2.}
 
