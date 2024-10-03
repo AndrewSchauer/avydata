@@ -5,6 +5,7 @@
 #' @param major_paths Optional vector of path names, if you want to look at a specific list of paths.
 #' @param WADT Traffic volume?
 #' @param percent_cars percentage of traffic volume that is cars. percentage of trucks calcualted automatically based on this value (1-percent_cars)
+#' @param include_plunging Logical. If TRUE, events with > 20' debris on road will be classified as'plunging'. If FALSE, all events with >3' on road will be classified as 'deep'. Default is TRUE.
 #' @param length_car_m average car length
 #' @param length_truck_m average truck length
 #' @param Lave_light Adjustment estimate for average length on road for light events. Default 0.3 from Schaerer, 1989
@@ -42,7 +43,7 @@
 
 Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, WADT = 7000,
                              percent_cars = 0.98, length_car_m = 15, length_truck_m = 30,
-                             reaction_time = 2.5, speed_limit = 48, road_grade = -0.1,
+                             reaction_time = 2.5, speed_limit = 48, road_grade = -0.1, include_plunging = TRUE,
                              coeff_friction = 0.2, Q_cars_powder = 0, Q_trucks_powder = 0,
                              Q_cars_light = 3, Q_trucks_light = 3, Q_cars_deep = 10,
                              Q_trucks_deep = 10, Q_cars_plunging = 12, Q_trucks_plunging = 12,
@@ -56,6 +57,7 @@ Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, 
   AHI_sum <- AHI_template(input_data = input_data,
                             n_frequency = n_frequency,
                             major_paths = major_paths,
+                            include_plunging = include_plunging,
                             WADT = WADT,
                             percent_cars = percent_cars,
                             length_car_m = length_car_m,
