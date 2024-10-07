@@ -547,7 +547,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   # Convert the Pw_matrix to numeric if necessary
   Pw_matrix <- apply(Pw_matrix, 2, as.numeric)
   # Round the Pw_matrix to one decimal place
-  Pw_matrix <- round(Pw_matrix, 1)
+  #Pw_matrix <- round(Pw_matrix, 1)
   #Calculate row sums of the matrix
   Waiting_AHI <- rowSums(Pw_matrix, na.rm = TRUE)
 
@@ -595,8 +595,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   SumTab$Deep_moving <- round(deep[, "Moving_AHI"], 1)
   SumTab$Plunging_moving <- round(plunging[, "Moving_AHI"], 1)
   SumTab$Moving_AHI <- rowSums(SumTab[, c("Powder_moving", "Light_moving", "Deep_moving", "Plunging_moving")])
-  SumTab$Waiting_AHI <- Waiting_AHI
-  SumTab$Waiting_AHI_2 <- diagonal_sum(Pw_matrix)
+  SumTab$Waiting_AHI <- round(Waiting_AHI, 1)
+  SumTab$Waiting_AHI_2 <- round(diagonal_sum(Pw_matrix),1)
   SumTab$Total_AHI <- round(SumTab$Moving_AHI + SumTab$Waiting_AHI, 2)
   SumTab$Total_AHI_2 <- round(SumTab$Moving_AHI + SumTab$Waiting_AHI_2, 2)
   SumTab$Mitigation_Effectiveness <- round(storage[, "mitigation_effectiveness"], 2)
