@@ -249,10 +249,10 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                                                                                                        "RoadHit"] %in% c("1", TRUE) | WorkingData[events,
                                                                                                                                                   "RoadDepth"] > 0 | WorkingData[events, "RoadLength"] >
                                                                                              0)))
-    storage[ob, "mitigation_effectiveness"] <- 1 - (storage[ob,
-                                                            "n_roadopen"]/storage[ob, "n_hits"])
-    storage[ob, "residual_risk"] <- (storage[ob, "n_roadopen"]/storage[ob,
-                                                                       "n_hits"])
+    storage[ob, "mitigation_effectiveness"] <- as.numeric(ifelse(!is.na(path_info[ob, "risk_reduction"]),
+                                                      path_info[ob, "risk_reduction"],
+                                                      1 - (storage[ob, "n_roadopen"] / storage[ob, "n_hits"])))
+    storage[ob, "residual_risk"] <- (1- storage[ob, "mitigation_effectiveness"])
     storage[ob, "open_naturals"] <- length(which(WorkingData[events,
                                                              "RoadOpen"] %in% c("1", TRUE) & WorkingData[events,
                                                                                                          "Trigger"] == "N"))
@@ -348,7 +348,9 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     # Check and assign powder events
       powder[ob, "path_count"] <- ob
       powder[ob, "PathName"] <- MajorPaths[ob]
-      powder[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "powder_frequency"]), path_info[ob, "powder_frequency"], storage[ob, "powder_frequency"]))
+      powder[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "powder_frequency"]),
+                                                    path_info[ob, "powder_frequency"],
+                                                    storage[ob, "powder_frequency"]))
       powder[ob, "ReturnPeriod"] <- ifelse(powder[ob, "AnnualFreq"] == 0, powder_RI, 1/powder[ob, "AnnualFreq"])
       powder[ob, "AveLength_m"] <- storage[ob, "ave_length_powder_m"]
       if (!is.null(path_info) && powder[ob, "PathName"] %in% path_info$PathName) {
@@ -627,6 +629,11 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   OH_long_2 <- reshape2::melt(OH2,id.vars = "PathName")
   OH_long_2$PathName <- factor(OH_long_2$PathName, levels = MajorPaths)
 
+  OH3 <- data.frame(AHI_R = SumTab$Residual_AHI,
+                    PathName = SumTab$PathName)
+  OH_long_3 <- reshape2::melt(OH3, id.vars = "PathName")
+  OH_long_3$PathName <- factor(OH_long_3$PathName, levels = MajorPaths)
+
   # Plot the barplots
   AHI_Barplot <- ggplot(OH_long, aes(x = PathName, y = value, fill = variable)) +
     geom_bar(stat = "identity", position = "stack") +
@@ -650,6 +657,16 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.background = element_rect(fill = "gray87", color = NA),
           plot.background = element_rect(fill = "gray97", color = NA))
+  # Plot Residual AHI
+  AHI_Barplot_3 <- ggplot(OH_long_3, aes(x = PathName, y = value, fill = variable)) +
+    geom_bar(stat = "identity", position = "stack") +
+    labs(x = "Path Name", y = "AHI", fill = "Type", title = "Residual AHI (Sum 2)") +
+    theme_minimal()+
+    scale_fill_manual(values = c("AHI_R" = "#3399FF"),
+                      labels = c("AHI_R" = "Residual AHI")) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.background = element_rect(fill = "gray87", color = NA),
+          plot.background = element_rect(fill = "gray97", color = NA))
 
   attributes(AHI_template) <- list(
     MajorPaths = MajorPaths,
@@ -668,6 +685,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     Overall_Hazard = SumTab,
     Overall_AHI = AHI_totals,
     plot1 = AHI_Barplot,
-    plot2 = AHI_Barplot_2
+    plot2 = AHI_Barplot_2,
+    plot3 = AHI_Barplot_3
   )
 }
