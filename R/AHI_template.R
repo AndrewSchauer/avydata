@@ -30,6 +30,7 @@
 #' @param reaction_time Driver's time to react in seconds. Used to calculate stopping distance. Default is 2.5.
 #' @param road_grade Grade of road in percentage as a decimal. Negative values indicate downhill slope. Default is -0.1.
 #' @param speed_limit Speed limit in km/h. Default 48 km/h.
+#' @param standard_RI Logical. If TRUE, return period estimates will be rounded to 1, 3, 10, 30, or 100 years for each path.
 #' @param WADT Traffic volume?
 #' @param wait_time Time in hours for waiting traffic. Default = 1.
 #'
@@ -48,7 +49,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
           Q_trucks_deep = 10, Q_cars_plunging = 12, Q_trucks_plunging = 12,
           powder_RI = 100, light_RI = 100, deep_RI = 100, plunging_RI = 1000,
           path_info = NULL, wait_time = 1, Ps = 0.05, Ps_prime = 0.15, Lave_light = 0.3,
-          Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0)
+          Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0, standard_RI = FALSE)
 {
   library(dplyr)
   library(tidyr)
@@ -158,6 +159,15 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
                         ave_cars_light = numeric(),
                         deep_return = numeric(),
                         ave_cars_deep = numeric())
+  reclassify_RI <- function(x, default_RI) {
+    if (x < 2 & x > 0) {return(1)}
+    else if (x >= 2 & x <5) {return(3)}
+    else if (x >= 5 & x < 20) {return(10)}
+    else if (x >= 20 & x < 50) {return(30)}
+    else if (x >= 50 & x < 300) {return(100)}
+    else if (x == 0) {return(default_RI)}
+    else {return(default_RI)} # For any unexpected cases
+  }
 
   station_list <- list()
   road_hits <- list()
@@ -269,15 +279,11 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
     storage[ob, "frequency"] <- storage[ob, "n_hits"]/storage[ob,
                                                               "recordlength"]
     storage[ob, "powder_frequency"] <- storage[ob, "n_powder"]/storage[ob, "recordlength"]
-    storage[ob, "light_frequency"] <- storage[ob, "n_light"]/storage[ob,
-                                                                     "recordlength"]
-    storage[ob, "deep_frequency"] <- storage[ob, "n_deep"]/storage[ob,
-                                                                   "recordlength"]
-    storage[ob, "plunging_frequency"] <- storage[ob, "n_plunging"]/storage[ob,
-                                                                           "recordlength"]
-    storage[ob, "n_calc_events"] <- length(which(WorkingData[events,
-                                                             "RoadDepth"] > 0 & WorkingData[events, "RoadLength"] >
-                                                   0))
+    storage[ob, "light_frequency"] <- storage[ob, "n_light"]/storage[ob, "recordlength"]
+    storage[ob, "deep_frequency"] <- storage[ob, "n_deep"]/storage[ob, "recordlength"]
+    storage[ob, "plunging_frequency"] <- storage[ob, "n_plunging"]/storage[ob, "recordlength"]
+    storage[ob, "n_calc_events"] <- length(which(WorkingData[events, "RoadDepth"] > 0 &
+                                                   WorkingData[events, "RoadLength"] > 0))
     light_forPercent <- length(which(WorkingData[events,
                                                  "RoadDepth"] <= 3 & WorkingData[events, "RoadDepth"] >
                                        0 & WorkingData[events, "RoadLength"] > 0))
@@ -351,7 +357,10 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       powder[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "powder_frequency"]),
                                                     path_info[ob, "powder_frequency"],
                                                     storage[ob, "powder_frequency"]))
-      powder[ob, "ReturnPeriod"] <- ifelse(powder[ob, "AnnualFreq"] == 0, powder_RI, 1/powder[ob, "AnnualFreq"])
+      powder_RI_calc <- ifelse(powder[ob, "AnnualFreq"] == 0, powder_RI, 1/powder[ob, "AnnualFreq"])
+      powder[ob, "ReturnPeriod"] <- ifelse(standard_RI == TRUE,
+                                           reclassify_RI(x = powder_RI_calc, default_RI = powder_RI ),
+                                           powder_RI_calc)
       powder[ob, "AveLength_m"] <- storage[ob, "ave_length_powder_m"]
       if (!is.null(path_info) && powder[ob, "PathName"] %in% path_info$PathName) {
         powder[ob, "Lmax_m"] <- path_info[path_info$PathName == powder[ob, "PathName"], "length"]
@@ -373,7 +382,10 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       light[ob, "path_count"] <- ob
       light[ob, "PathName"] <- MajorPaths[ob]
       light[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "light_frequency"]), path_info[ob, "light_frequency"], storage[ob, "light_frequency"]))
-      light[ob, "ReturnPeriod"] <- ifelse(light[ob, "AnnualFreq"] == 0, light_RI, 1/light[ob, "AnnualFreq"])
+      light_RI_calc <- ifelse(light[ob, "AnnualFreq"] == 0, light_RI, 1/light[ob, "AnnualFreq"])
+      light[ob, "ReturnPeriod"] <- ifelse(standard_RI == TRUE,
+                                           reclassify_RI(x = light_RI_calc, default_RI = light_RI ),
+                                           light_RI_calc)
       light[ob, "AveLength_m"] <- storage[ob, "ave_length_light_m"]
       if (!is.null(path_info) && light[ob, "PathName"] %in% path_info$PathName) {
         light[ob, "Lmax_m"] <- path_info[path_info$PathName == light[ob, "PathName"], "length"]
@@ -395,7 +407,10 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       deep[ob, "path_count"] <- ob
       deep[ob, "PathName"] <- MajorPaths[ob]
       deep[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "deep_frequency"]), path_info[ob, "deep_frequency"], storage[ob, "deep_frequency"]))
-      deep[ob, "ReturnPeriod"] <- ifelse(deep[ob, "AnnualFreq"] == 0, deep_RI, 1/deep[ob, "AnnualFreq"])
+      deep_RI_calc <- ifelse(deep[ob, "AnnualFreq"] == 0, deep_RI, 1/deep[ob, "AnnualFreq"])
+      deep[ob, "ReturnPeriod"] <- ifelse(standard_RI == TRUE,
+                                           reclassify_RI(x = deep_RI_calc, default_RI = deep_RI ),
+                                           deep_RI_calc)
       deep[ob, "AveLength_m"] <- storage[ob, "ave_length_deep_m"]
       if (!is.null(path_info) && deep[ob, "PathName"] %in% path_info$PathName) {
         deep[ob, "Lmax_m"] <- path_info[path_info$PathName == deep[ob, "PathName"], "length"]
@@ -417,7 +432,10 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       plunging[ob, "path_count"] <- ob
       plunging[ob, "PathName"] <- MajorPaths[ob]
       plunging[ob, "AnnualFreq"] <- as.numeric(ifelse(!is.na(path_info[ob, "plunging_frequency"]), path_info[ob, "plunging_frequency"], storage[ob, "plunging_frequency"]))
-      plunging[ob, "ReturnPeriod"] <- ifelse(plunging[ob, "AnnualFreq"] == 0, plunging_RI, 1/plunging[ob, "AnnualFreq"])
+      plunging_RI_calc <- ifelse(plunging[ob, "AnnualFreq"] == 0, plunging_RI, 1/plunging[ob, "AnnualFreq"])
+      plunging[ob, "ReturnPeriod"] <- ifelse(standard_RI == TRUE,
+                                           reclassify_RI(x = plunging_RI_calc, default_RI = plunging_RI ),
+                                           plunging_RI_calc)
       plunging[ob, "AveLength_m"] <- storage[ob, "ave_length_plunging_m"]
       if (!is.null(path_info) && plunging[ob, "PathName"] %in% path_info$PathName) {
         plunging[ob, "Lmax_m"] <- path_info[path_info$PathName == plunging[ob, "PathName"], "length"]
