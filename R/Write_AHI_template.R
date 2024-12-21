@@ -32,6 +32,7 @@
 #' @param outputPath Desired path to save Excel Workbook
 #' @param Ps Probability of a second avalanche running in path J with waiting traffic. Default 0.05 after Schaere, 1989.
 #' @param Ps_prime Probability of an avalanche releasing in path adjacent to J with waiting traffic. Default 0.3 after Schaerer, 1989.
+#' @param standard_RI Logical. If TRUE, return period estimates will be rounded to 1, 3, 10, 30, or 100 years for each path.
 #' @param wait_time Time in hours for waiting traffic. Default = 1.
 
 #' @return This will save the AHI data to a workbook that is similar to the format used by Hamre et al.
@@ -49,7 +50,7 @@ Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, 
                              Q_trucks_deep = 10, Q_cars_plunging = 12, Q_trucks_plunging = 12,
                              powder_RI = 100, light_RI = 100, deep_RI = 100, plunging_RI = 1000,
                              path_info = NULL, outputPath, wait_time = 1, Ps = 0.05, Ps_prime = 0.3, Lave_light = 0.3,
-                             Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0) {
+                             Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0, standard_RI = FALSE) {
   library(openxlsx)
   library(avydata)
 
@@ -80,7 +81,8 @@ Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, 
                             plunging_RI = plunging_RI,
                             path_info = path_info,
                             wait_time = wait_time,
-                            missing_seasons = missing_seasons)
+                            missing_seasons = missing_seasons,
+                            standard_RI = standard_RI)
   AHI_tables <- list("Powder" = AHI_sum$AHI_moving_powder,
                       "Light" = AHI_sum$AHI_moving_light,
                       "Deep" = AHI_sum$AHI_moving_deep,
