@@ -36,7 +36,8 @@ AHI_template(
   Lave_light = 0.3,
   Lave_deep = 0.7,
   Lave_plunging = 0.5,
-  missing_seasons = 0
+  missing_seasons = 0,
+  standard_RI = FALSE
 )
 }
 \arguments{
@@ -103,6 +104,8 @@ AHI_template(
 \item{Lave_plunging}{Adjustment estimate for average length on road for plunging events. Default 0.5 from Schaerer, 1989}
 
 \item{missing_seasons}{Optional number of seasons missing from record. Used to calculate Record Length for return intervals.}
+
+\item{standard_RI}{Logical. If TRUE, return period estimates will be rounded to 1, 3, 10, 30, or 100 years for each path.}
 }
 \value{
 The tables used in the AHI template
