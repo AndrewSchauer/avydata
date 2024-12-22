@@ -82,7 +82,10 @@ Write_AHI_template <- function(input_data, n_frequency = 1, major_paths = NULL, 
                             path_info = path_info,
                             wait_time = wait_time,
                             missing_seasons = missing_seasons,
-                            standard_RI = standard_RI)
+                            standard_RI = standard_RI,
+                            Lave_light = Lave_light,
+                            Lave_deep = Lave_deep,
+                            Lave_plunging = Lave_plunging)
   AHI_tables <- list("Powder" = AHI_sum$AHI_moving_powder,
                       "Light" = AHI_sum$AHI_moving_light,
                       "Deep" = AHI_sum$AHI_moving_deep,
