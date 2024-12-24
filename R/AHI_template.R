@@ -11,6 +11,7 @@
 #' @param Lave_deep Adjustment estimate for average length on road for deep events. Default 0.7 from Schaerer, 1989
 #' @param Lave_plunging Adjustment estimate for average length on road for plunging events. Default 0.5 from Schaerer, 1989
 #' @param major_paths Optional vector of path names, if you want to look at a specific list of paths.
+#' @param min_length_events Integer. Minimum number of observations per path with recorded RoadLength in order to calculate Lave. If there are fewer than the specified value, Lave will be calculated as a percentage of Lmax using Lave_light, Lave_deep, and Lave_plunging variables. Default is 3 observations.
 #' @param missing_seasons Optional number of seasons missing from record. Used to calculate Record Length for return intervals.
 #' @param n_frequency The minimum number of events required to include the avalanche path as a 'Major' avalanche path. Default is 4. Value will be ignored if 'major_paths' argument is specified.
 #' @param path_info Path to optional .csv with columns "path_count", "PathName",'length', "Jminus", "Jplus", and "missing_info" defining the road length of each path and space between previous and next path, in meters, and the number of seasons missing from the entire record for each path..
@@ -49,7 +50,7 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
           Q_trucks_deep = 10, Q_cars_plunging = 12, Q_trucks_plunging = 12,
           powder_RI = 100, light_RI = 100, deep_RI = 100, plunging_RI = 1000,
           path_info = NULL, wait_time = 1, Ps = 0.05, Ps_prime = 0.15, Lave_light = 0.3,
-          Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0, standard_RI = FALSE)
+          Lave_deep = 0.7, Lave_plunging = 0.5, missing_seasons = 0, standard_RI = FALSE, min_length_events = 3)
 {
   library(dplyr)
   library(tidyr)
@@ -314,24 +315,24 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
       storage[ob, "plunging_percentage"] <- 0
     }
     storage[ob, "ave_length_powder_ft"] <- round(ifelse(length(powder_events) > 0,
-                                                  ifelse(all(is.na(WorkingData[powder_events, "RoadLength"])),
+                                                  ifelse(length(which(!is.na(WorkingData[events[powder_events], "RoadLength"]))) < min_length_events,
                                                          1/.3048,
-                                                         mean(WorkingData[powder_events, "RoadLength"], na.rm = TRUE)),
+                                                         mean(WorkingData[events[powder_events], "RoadLength"], na.rm = TRUE)),
                                                   1/.3048), 0)
     storage[ob, "ave_length_light_ft"] <- round(ifelse(length(light_events) > 0,
-                                                  ifelse(all(is.na(WorkingData[light_events, "RoadLength"])),
+                                                  ifelse(length(which(!is.na(WorkingData[events[light_events], "RoadLength"]))) < min_length_events,
                                                          ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"]/.3048, 1/.3048),
-                                                         mean(WorkingData[light_events, "RoadLength"], na.rm = TRUE)),
+                                                         mean(WorkingData[events[light_events], "RoadLength"], na.rm = TRUE)),
                                                  ifelse(!is.null(path_info), Lave_light*path_info[ob, "length"]/.3048, 1/.3048)), 0)
     storage[ob, "ave_length_deep_ft"] <- round(ifelse(length(deep_events) > 0,
-                                                  ifelse(all(is.na(WorkingData[deep_events, "RoadLength"])),
+                                                  ifelse(length(which(!is.na(WorkingData[events[deep_events], "RoadLength"]))) < min_length_events,
                                                          ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"]/.3048, 1/.3048),
-                                                         mean(WorkingData[deep_events, "RoadLength"], na.rm = TRUE)),
+                                                         mean(as.numeric(WorkingData[events[deep_events], "RoadLength"]), na.rm = TRUE)),
                                                 ifelse(!is.null(path_info), Lave_deep*path_info[ob, "length"]/.3048, 1/.3048)), 0)
     storage[ob, "ave_length_plunging_ft"] <- round(ifelse(length(plunging_events) > 0,
-                                                  ifelse(all(is.na(WorkingData[plunging_events, "RoadLength"])),
+                                                  ifelse(length(which(!is.na(WorkingData[events[plunging_events], "RoadLength"]))) < min_length_events,
                                                          ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"]/.3048, 1/.3048),
-                                                         mean(WorkingData[plunging_events, "RoadLength"], na.rm = TRUE)),
+                                                         mean(WorkingData[events[plunging_events], "RoadLength"], na.rm = TRUE)),
                                                   ifelse(!is.null(path_info), Lave_plunging*path_info[ob, "length"]/.3048, 1/.3048)), 0)
     storage[ob, "ave_length_powder_m"] <- ifelse(is.null(path_info),
                                                  round(storage[ob, "ave_length_powder_ft"] * 0.3048, 0),
@@ -626,8 +627,8 @@ AHI_template <- function (input_data, n_frequency = 1, major_paths = NULL, WADT 
   #Table of road hits
   combined_road_hits <- do.call(rbind, road_hits) %>% select_if(~any(!is.na(.) & . != ""))
 
-  input_parameters <- data.frame("Parameter" = c("WADT", "Percent Cars", "Percent Trucks", "Car Length", "Truck Length", "Reaction Time", "Speed Limit", "Road Grade", "Friction Coeff", "Waiting Time", "Ps", "Ps_prime", "Lave_light", "Lave_deep", "Lave_plunging"),
-                             "Value" = c(WADT, percent_cars, percent_trucks, length_car_m, length_truck_m, reaction_time, speed_limit, road_grade, coeff_friction, wait_time, Ps, Ps_prime, Lave_light, Lave_deep, Lave_plunging))
+  input_parameters <- data.frame("Parameter" = c("WADT", "Percent Cars", "Percent Trucks", "Car Length", "Truck Length", "Reaction Time", "Speed Limit", "Road Grade", "Friction Coeff", "Waiting Time", "Ps", "Ps_prime", "Lave_light", "Lave_deep", "Lave_plunging", "Specify plunging events?", "Min. Road Length records to calculate Lave?"),
+                             "Value" = c(WADT, percent_cars, percent_trucks, length_car_m, length_truck_m, reaction_time, speed_limit, road_grade, coeff_friction, wait_time, Ps, Ps_prime, Lave_light, Lave_deep, Lave_plunging, as.character(include_plunging), min_length_events))
   calc_parameters <- data.frame("Parameter" = c("n_cars", "n_trucks", "stopping_dist", "Lw"),
                                 "Value" = c(n_cars, n_trucks, stopping_dist, Lw))
   AHI_totals <- data.frame(c("Moving AHI", "Waiting AHI", "Total AHI", "Residual AHI"),
